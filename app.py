@@ -6,7 +6,7 @@ st.set_page_config(page_title="Eeki Farms Vegetable Rates", page_icon="🥬", la
 # Vegetable rates (₹ per km per kg) - your values + defaults
 VEGETABLE_RATES = {
     "Pak Choy": 0.001320,
-    "Cucumber": 0.0000201
+    "Cucumber": 0.0000201,
     "Bellpepper":0.0000576,
     "Tomato": 0.0000533,
     "Chilli": 0.0006957,
