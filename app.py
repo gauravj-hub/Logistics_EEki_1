@@ -3,7 +3,7 @@ import pandas as pd
 
 st.set_page_config(page_title="Eeki Farms Vegetable Pricing", page_icon="🥬", layout="wide")
 
-# Updated with your EXACT average cost/kg prices (₹/kg)
+# Your exact average cost/kg prices (₹/kg)
 VEGETABLE_RATES = {
     "coriander": 9.58,
     "Yellow bellpepper": 6.32,
@@ -32,14 +32,14 @@ VEGETABLE_RATES = {
 }
 
 def calculate_charges(veg, weight):
-    rate = VEGETABLE_RATES.get(veg, 4.00)  # Default average
+    rate = VEGETABLE_RATES.get(veg, 4.00)
     return weight * rate
 
 # Header
 st.title("🥬 Eeki Farms Vegetable Pricing Calculator")
 st.markdown("*Average Cost per KG from your data*")
 
-# Calculator tabs
+# Tabs 1 & 2 unchanged
 tab1, tab2, tab3 = st.tabs(["🧮 Quick Calc", "📦 Batch Calc", "📋 Quotes"])
 
 with tab1:
@@ -96,54 +96,65 @@ with tab2:
             csv = st.session_state.batch_data.round(2).to_csv(index=False).encode('utf-8')
             st.download_button("📥 Download CSV", csv, "eeki_order.csv")
 
+# NEW Tab 3: Per-crop weights
 with tab3:
-    st.subheader("Customer Quote")
+    st.subheader("📋 Detailed Customer Quote")
     
-    with st.form("quote_form"):
-        customer = st.text_input("Customer Name")
-        veg_list = st.multiselect("Select Vegetables", list(VEGETABLE_RATES.keys()), max_selections=8)
-        total_weight = st.number_input("Total Weight (KG)", value=500.0)
-        gst = st.number_input("GST %", value=18.0, step=1.0)
-        
-        q_submit = st.form_submit_button("📄 Generate Quote")
+    customer = st.text_input("Customer Name", value="Jai Balaji Company")
+    gst = st.number_input("GST %", value=18.0, step=1.0)
     
-    if q_submit and customer and veg_list:
-        avg_rate = sum(VEGETABLE_RATES[v] for v in veg_list) / len(veg_list)
-        subtotal = total_weight * avg_rate
+    # Dynamic crop-weight input
+    st.markdown("**Enter quantities for each crop:**")
+    
+    quote_items = []
+    for veg in VEGETABLE_RATES.keys():
+        weight = st.number_input(f"{veg}", min_value=0.0, value=0.0, key=f"w_{veg}", step=10.0)
+        if weight > 0:
+            quote_items.append({
+                "Vegetable": veg,
+                "Weight_KG": weight,
+                "Rate": VEGETABLE_RATES[veg],
+                "Amount": calculate_charges(veg, weight)
+            })
+    
+    if st.button("📄 Generate Quote", type="primary") and quote_items:
+        quote_df = pd.DataFrame(quote_items)
+        subtotal = quote_df['Amount'].sum()
         gst_amount = subtotal * (gst / 100)
         grand_total = subtotal + gst_amount
         
+        st.success("**Quote Generated!**")
+        
+        # Detailed quote table
         st.markdown(f"""
-        # **Eeki Farms - Vegetable Quote**
+        # **Eeki Farms - Detailed Vegetable Quote**
         
         **To**: {customer.upper()}
         **Date**: {pd.Timestamp.now().strftime("%d Feb %Y")}
+        **GST**: {gst}%
         
-        **Order Summary**:
-        - Vegetables: {', '.join(veg_list[:5])}{'...' if len(veg_list)>5 else ''}
-        - Total Weight: **{total_weight:,.0f} KG**
-        - Average Rate: **₹{avg_rate:.2f}/kg**
+        **Order Details:**
+        """)
         
-        **Pricing**:
+        st.dataframe(quote_df.round(2), use_container_width=True, hide_index=True)
+        
+        st.markdown(f"""
+        **Summary**:
         | Item | Amount |
         |------|--------|
-        | Subtotal | ₹{subtotal:,.2f} |
+        | **Subtotal** | **₹{subtotal:,.2f}** |
         | GST @{gst}% | ₹{gst_amount:,.2f} |
         | **GRAND TOTAL** | **₹{grand_total:,.2f}** |
         """)
         
-        # Download quote
-        quote_data = {
-            "Customer": customer,
-            "Vegetables": ', '.join(veg_list),
-            "Total_Weight_KG": total_weight,
-            "Avg_Rate": avg_rate,
-            "Subtotal": subtotal,
-            "GST": gst_amount,
-            "Grand_Total": grand_total
-        }
-        csv_quote = pd.DataFrame([quote_data]).to_csv(index=False).encode('utf-8')
-        st.download_button("💾 Download Quote", csv_quote, f"eeki_quote_{customer.replace(' ','_')}.csv")
+        # Download detailed quote
+        quote_data = quote_df.copy()
+        quote_data.loc['TOTAL'] = ['Subtotal', '', '', subtotal]
+        quote_data.loc['GST'] = [f'GSTR @{gst}%', '', '', gst_amount]
+        quote_data.loc['GRAND'] = ['GRAND TOTAL', '', '', grand_total]
+        
+        csv_quote = quote_data.round(2).to_csv(index=False).encode('utf-8')
+        st.download_button("💾 Download Detailed Quote", csv_quote, f"detailed_quote_{customer.replace(' ','_')}.csv")
 
 st.markdown("---")
-st.caption("Eeki Farms | Updated with your exact average costs per KG")
+st.caption("Eeki Farms | Per-crop weight quoting enabled")
