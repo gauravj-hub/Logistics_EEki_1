@@ -59,9 +59,7 @@ with tab1:
         with col_a:
             st.metric("Rate/kg", f"₹{rate:.2f}")
         with col_b:
-            st.metric("Total", f"₹{charges:,.2f}")
-        with col_c:
-            st.metric("Per KG", f"₹{rate:.2f}")
+            st.metric("Total", f"₹{charges:,.2
 
 with tab2:
     st.subheader("Batch Calculator")
