@@ -3,7 +3,7 @@ import pandas as pd
 
 st.set_page_config(page_title="Eeki Farms Vegetable Rates", page_icon="🥬", layout="wide")
 
-# Vegetable rates (₹ per km per kg) - your values + defaults
+# Vegetable rates (₹ per kg) - updated for weight-only
 VEGETABLE_RATES = {
     "Pak Choy": 0.001320,
     "Cucumber": 0.0000201,
@@ -33,38 +33,34 @@ VEGETABLE_RATES = {
     "Celery": 0.0019
 }
 
-def calculate_charges(veg, km, weight):
+def calculate_charges(veg, weight):
     rate = VEGETABLE_RATES.get(veg, 0.0025)
-    return km * weight * rate
+    return weight * rate
 
 # Header
-st.title("🥬 Eeki Farms Vegetable Logistics Calculator")
+st.title("🥬 Eeki Farms Vegetable Pricing Calculator")
 
-# Calculator tabs - NO rates table
+# Calculator tabs
 tab1, tab2, tab3 = st.tabs(["🧮 Quick Calc", "📦 Batch Calc", "📋 Quotes"])
 
 with tab1:
     st.subheader("Single Shipment Calculator")
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     with col1:
         vegetable = st.selectbox("Vegetable", list(VEGETABLE_RATES.keys()))
     with col2:
-        km = st.number_input("KM", min_value=1.0, value=100.0)
-    with col3:
         weight = st.number_input("Weight (KG)", min_value=0.1, value=50.0)
     
     if st.button("Calculate", type="primary"):
         rate = VEGETABLE_RATES[vegetable]
-        charges = calculate_charges(vegetable, km, weight)
+        charges = calculate_charges(vegetable, weight)
         
-        col_a, col_b, col_c = st.columns(3)
+        col_a, col_b = st.columns(2)
         with col_a:
-            st.metric("Rate", f"₹{rate:.6f}")
+            st.metric("Rate", f"₹{rate:.6f}/kg")
         with col_b:
-            st.metric("Charges", f"₹{charges:,.2f}")
-        with col_c:
-            st.metric("Per KG", f"₹{charges/weight:.2f}")
+            st.metric("Total Charges", f"₹{charges:,.2f}")
 
 with tab2:
     st.subheader("Batch Inventory Calculator")
@@ -73,15 +69,14 @@ with tab2:
         st.session_state.batch_data = pd.DataFrame()
     
     with st.form("batch_form"):
-        col1, col2, col3 = st.columns(3)
+        col1, col2 = st.columns(2)
         with col1: veg_batch = st.selectbox("Add Vegetable", list(VEGETABLE_RATES.keys()))
-        with col2: km_batch = st.number_input("KM", value=100.0)
-        with col3: weight_batch = st.number_input("KG", value=50.0)
+        with col2: weight_batch = st.number_input("Weight (KG)", value=50.0)
         if st.form_submit_button("➕ Add Batch"):
             new_row = pd.DataFrame({
-                "Vegetable": [veg_batch], "KM": [km_batch], "Weight_KG": [weight_batch],
+                "Vegetable": [veg_batch], "Weight_KG": [weight_batch],
                 "Rate": [VEGETABLE_RATES[veg_batch]],
-                "Charges": [calculate_charges(veg_batch, km_batch, weight_batch)]
+                "Charges": [calculate_charges(veg_batch, weight_batch)]
             })
             st.session_state.batch_data = pd.concat([st.session_state.batch_data, new_row])
             st.success("Added!")
@@ -106,27 +101,25 @@ with tab3:
     with st.form("quote_form"):
         customer = st.text_input("Customer")
         veg_list = st.multiselect("Vegetables", list(VEGETABLE_RATES.keys()), max_selections=5)
-        total_km = st.number_input("Total KM", value=100.0)
         total_weight = st.number_input("Total Weight KG", value=200.0)
         gst_pct = st.number_input("GST %", value=18.0)
         
         if st.form_submit_button("📄 Generate Quote"):
             if veg_list:
                 avg_rate = sum(VEGETABLE_RATES[v] for v in veg_list) / len(veg_list)
-                base_charges = total_km * total_weight * avg_rate
+                base_charges = total_weight * avg_rate
                 gst_amount = base_charges * (gst_pct / 100)
                 final_total = base_charges + gst_amount
                 
                 st.markdown(f"""
-                # **Eeki Farms Logistics Quote**
+                # **Eeki Farms Vegetable Quote**
                 
                 **Customer**: {customer}  
                 **Date**: {pd.Timestamp.now().strftime("%d/%m/%Y")}
                 
                 **Vegetables**: {', '.join(veg_list)}
-                **Distance**: {total_km} KM
-                **Weight**: {total_weight} KG
-                **Avg Rate**: ₹{avg_rate:.6f}/km/kg
+                **Total Weight**: {total_weight} KG
+                **Avg Rate**: ₹{avg_rate:.6f}/kg
                 
                 ---
                 **Base Charges**: ₹{base_charges:,.2f}
@@ -136,7 +129,7 @@ with tab3:
                 
                 quote_df = pd.DataFrame({
                     "Customer": [customer], "Vegetables": [', '.join(veg_list)],
-                    "KM": [total_km], "Weight_KG": [total_weight],
+                    "Weight_KG": [total_weight],
                     "Avg_Rate": [avg_rate], "Base": [base_charges],
                     "GST": [gst_amount], "Total": [final_total]
                 })
@@ -144,4 +137,4 @@ with tab3:
                 st.download_button("💾 Download Quote", csv_quote, f"quote_{customer}.csv")
 
 st.markdown("---")
-st.caption("Eeki Farms | Vegetable Logistics Calculator")
+st.caption("Eeki Farms | Vegetable Pricing (₹ per KG)")
