@@ -6,8 +6,8 @@ st.set_page_config(page_title="Eeki Farms Vegetable Pricing", page_icon="🥬", 
 # Updated with your EXACT average cost/kg prices (₹/kg)
 VEGETABLE_RATES = {
     "coriander": 9.58,
-    "Yellow bellpepper": 7.65,
-    "Red bellpepper": 7.53,
+    "Yellow bellpepper": 6.32,
+    "Red bellpepper": 6.26,
     "Spring onion": 7.32,
     "Chilli": 6.89,
     "Muskmelon": 6.60,
